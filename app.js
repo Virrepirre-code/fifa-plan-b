@@ -138,11 +138,19 @@ function initPlayers() {
     $('#playerName').focus();
   });
 
-  $('#groupSize').addEventListener('change', e => {
-    state.settings.groupSize = parseInt(e.target.value);
+  const onGroupSizeChange = e => {
+    let val = parseInt(e.target.value);
+    if (Number.isNaN(val)) val = 4;
+    val = Math.max(2, Math.min(12, val));
+    state.settings.groupSize = val;
     saveState();
     updateGenerateInfo();
+  };
+  $('#groupSize').addEventListener('change', e => {
+    onGroupSizeChange(e);
+    e.target.value = state.settings.groupSize;
   });
+  $('#groupSize').addEventListener('input', onGroupSizeChange);
   $('#matchLength').addEventListener('change', e => {
     state.settings.matchLength = parseInt(e.target.value) || 6;
     saveState();
@@ -213,21 +221,32 @@ function renderPlayers() {
   updateGenerateInfo();
 }
 
+function computeGroupSplit(n, targetSize) {
+  if (n < 2) return { numGroups: 0, sizes: [] };
+  const numGroups = Math.max(1, Math.round(n / targetSize));
+  const base = Math.floor(n / numGroups);
+  const extra = n % numGroups;
+  const sizes = Array.from({length: numGroups}, (_, i) => base + (i < extra ? 1 : 0));
+  return { numGroups, sizes };
+}
+
 function updateGenerateInfo() {
   const info = $('#generateInfo');
   const n = state.players.length;
   const gs = state.settings.groupSize;
-  if (n < gs) {
-    info.textContent = `Du behöver minst ${gs} spelare för att skapa en grupp. (Just nu: ${n})`;
+  if (n < 2) {
+    info.textContent = `Du behöver minst 2 spelare för att köra en turnering. (Just nu: ${n})`;
     return;
   }
-  const fullGroups = Math.floor(n / gs);
-  const remainder = n % gs;
-  let txt = `${n} spelare → ${fullGroups} grupp${fullGroups === 1 ? '' : 'er'} om ${gs}`;
-  if (remainder > 0) {
-    txt += `, plus ${remainder} extra som fördelas i grupperna (vissa blir ${gs+1}).`;
-  } else {
+  const { numGroups, sizes } = computeGroupSplit(n, gs);
+  const minSize = Math.min(...sizes);
+  const maxSize = Math.max(...sizes);
+  const sizeText = minSize === maxSize ? `${minSize}` : `${minSize}–${maxSize}`;
+  let txt = `${n} spelare → ${numGroups} grupp${numGroups === 1 ? '' : 'er'} med ${sizeText} spelare`;
+  if (minSize === maxSize) {
     txt += '. Perfekt fördelning. 🎯';
+  } else {
+    txt += ` (sizes: ${sizes.join(' + ')}).`;
   }
   info.textContent = txt;
 }
@@ -236,8 +255,8 @@ function updateGenerateInfo() {
 function generateGroupsAndSchedule() {
   const n = state.players.length;
   const gs = state.settings.groupSize;
-  if (n < gs) {
-    toast(`Behöver minst ${gs} spelare. Just nu: ${n}.`);
+  if (n < 2) {
+    toast(`Behöver minst 2 spelare. Just nu: ${n}.`);
     return;
   }
   if (state.matches.some(m => m.played) && !confirm('Du har redan spelade matcher. Vill du verkligen slumpa om allt och nollställa resultaten?')) {
@@ -245,7 +264,7 @@ function generateGroupsAndSchedule() {
   }
 
   const shuffled = shuffle(state.players);
-  const numGroups = Math.floor(n / gs);
+  const { numGroups } = computeGroupSplit(n, gs);
   const groups = [];
   for (let i = 0; i < numGroups; i++) {
     groups.push({ id: String.fromCharCode(65 + i), playerIds: [] });
@@ -386,33 +405,41 @@ function renderGroups() {
           <span>Grupp ${group.id}</span>
           <span class="group-sub">topp ${adv} går vidare</span>
         </div>
-        <table class="standings-table">
-          <thead>
-            <tr>
-              <th style="text-align:left">Spelare</th>
-              <th>S</th><th>V</th><th>O</th><th>F</th>
-              <th>GM</th><th>IM</th><th>MS</th><th>P</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map((r, idx) => {
-              const p = getPlayer(r.id);
-              const cls = idx < adv ? 'qualify' : '';
-              return `
-                <tr class="${cls}">
-                  <td class="player-cell">${escapeHtml(p?.emoji || '')} ${escapeHtml(p?.name || '?')}</td>
-                  <td>${r.played}</td>
-                  <td>${r.w}</td>
-                  <td>${r.d}</td>
-                  <td>${r.l}</td>
-                  <td>${r.gf}</td>
-                  <td>${r.ga}</td>
-                  <td>${r.gd > 0 ? '+' : ''}${r.gd}</td>
-                  <td class="pts">${r.pts}</td>
-                </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
+        <div class="standings-wrap">
+          <table class="standings-table">
+            <thead>
+              <tr>
+                <th style="text-align:left">Spelare</th>
+                <th title="Spelade">S</th>
+                <th title="Vinster">V</th>
+                <th title="Oavgjorda">O</th>
+                <th title="Förluster">F</th>
+                <th title="Gjorda mål">GM</th>
+                <th title="Insläppta mål">IM</th>
+                <th title="Målskillnad">MS</th>
+                <th title="Poäng">P</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map((r, idx) => {
+                const p = getPlayer(r.id);
+                const cls = idx < adv ? 'qualify' : '';
+                return `
+                  <tr class="${cls}">
+                    <td class="player-cell" title="${escapeHtml(p?.name || '?')}">${escapeHtml(p?.emoji || '')} ${escapeHtml(p?.name || '?')}</td>
+                    <td>${r.played}</td>
+                    <td>${r.w}</td>
+                    <td>${r.d}</td>
+                    <td>${r.l}</td>
+                    <td>${r.gf}</td>
+                    <td>${r.ga}</td>
+                    <td>${r.gd > 0 ? '+' : ''}${r.gd}</td>
+                    <td class="pts">${r.pts}</td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
       </div>`;
   }).join('') + `</div>`;
 }
