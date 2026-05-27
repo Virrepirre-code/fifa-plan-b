@@ -238,6 +238,16 @@ function renderPlayers() {
   updateGenerateInfo();
 }
 
+// Antal som faktiskt går vidare till slutspelet — tvingar top-2 vid exakt 2 grupper
+// så att vi alltid får semifinaler (1A vs 2B, 1B vs 2A) även om cup-mode är vald.
+function getEffectiveAdvance() {
+  let adv = state.settings.advanceCount;
+  if (state.groups.length === 2 && adv < 2 && state.groups.every(g => g.playerIds.length >= 2)) {
+    adv = 2;
+  }
+  return adv;
+}
+
 function computeGroupSplit(n) {
   if (n < 2) return { numGroups: 0, sizes: [] };
   let numGroups;
@@ -424,9 +434,9 @@ function renderGroups() {
     return;
   }
 
+  const adv = getEffectiveAdvance();
   container.innerHTML = `<div class="groups-grid">` + state.groups.map(group => {
     const rows = calcStandings(group.id);
-    const adv = state.settings.advanceCount;
     return `
       <div class="group-card">
         <div class="group-header">
@@ -801,17 +811,18 @@ function generateKnockout() {
     state.matches = state.matches.filter(m => m.stage === 'group');
   }
 
-  const adv = state.settings.advanceCount;
+  const effectiveAdv = getEffectiveAdvance();
+
   const qualifiers = [];
   state.groups.forEach(group => {
     const standings = calcStandings(group.id);
-    standings.slice(0, adv).forEach((s, pos) => {
+    standings.slice(0, effectiveAdv).forEach((s, pos) => {
       qualifiers.push({ playerId: s.id, group: group.id, pos: pos + 1 });
     });
   });
 
   // Skapa parningar enligt klassiskt schema (1A vs 2B, 1B vs 2A...)
-  const pairs = buildBracketPairs(qualifiers);
+  const pairs = buildBracketPairs(qualifiers, effectiveAdv);
   const totalSlots = pairs.length * 2;
   let stage;
   if (totalSlots >= 8) stage = 'quarter';
@@ -882,11 +893,10 @@ function generateKnockout() {
   toast('🏆 Slutspelet är ritat! Lycka till.');
 }
 
-function buildBracketPairs(qualifiers) {
+function buildBracketPairs(qualifiers, adv = state.settings.advanceCount) {
   // qualifiers: [{playerId, group, pos}]
   // Standardseeding: 1A vs 2B, 1B vs 2A, 1C vs 2D, 1D vs 2C ... osv.
   // Om bara en går vidare per grupp: matcha grupper i ordning A vs B, C vs D
-  const adv = state.settings.advanceCount;
   const groups = state.groups.map(g => g.id);
   const pairs = [];
 
