@@ -443,7 +443,7 @@ function renderGroups() {
     return `
       <div class="group-card">
         <div class="group-header">
-          <span>Grupp ${group.id}</span>
+          <span>Plan ${group.id}</span>
           <span class="group-sub">topp ${adv} går vidare</span>
         </div>
         <div class="standings-wrap">
@@ -559,7 +559,7 @@ function renderMatchRow(m) {
   const p1 = getPlayer(m.p1);
   const p2 = getPlayer(m.p2);
   const played = m.played;
-  const tag = m.stage === 'group' ? `Grupp ${m.groupId}` : ({quarter:'Kvart',semi:'Semi',final:'Final',third:'Brons'}[m.stage] || m.stage);
+  const tag = m.stage === 'group' ? `Plan ${m.groupId}` : ({quarter:'Kvart',semi:'Semi',final:'Final',third:'Brons'}[m.stage] || m.stage);
 
   let p1Win = false, p2Win = false;
   if (played) {
@@ -618,7 +618,7 @@ function openMatchModal(matchId) {
   }
   currentMatchId = matchId;
   const stageLabel = m.stage === 'group'
-    ? `Grupp ${m.groupId} · Omgång ${m.round}`
+    ? `Plan ${m.groupId} · Omgång ${m.round}`
     : ({quarter:'Kvartsfinal', semi:'Semifinal', final:'Final', third:'Bronsmatch'}[m.stage] || m.stage);
 
   $('#modalTitle').textContent = stageLabel;
@@ -942,8 +942,22 @@ function renderDashboard() {
     }).join('');
   }
 
-  // Nästa matcher
-  const upcoming = state.matches.filter(m => !m.played && m.p1 && m.p2).slice(0, 5);
+  // Nästa matcher — sortera så att omgång 1 från alla grupper kommer före omgång 2 osv.
+  const STAGE_ORDER = { group: 0, quarter: 1, semi: 2, third: 3, final: 4 };
+  const upcoming = state.matches
+    .filter(m => !m.played && m.p1 && m.p2)
+    .slice()
+    .sort((a, b) => {
+      const sa = STAGE_ORDER[a.stage] ?? 99;
+      const sb = STAGE_ORDER[b.stage] ?? 99;
+      if (sa !== sb) return sa - sb;
+      if (a.stage === 'group' && b.stage === 'group') {
+        if (a.round !== b.round) return a.round - b.round;
+        return (a.groupId || '').localeCompare(b.groupId || '');
+      }
+      return (a.bracketSlot ?? 0) - (b.bracketSlot ?? 0);
+    })
+    .slice(0, 5);
   const upEl = $('#upcomingMatches');
   if (upcoming.length === 0) {
     upEl.innerHTML = `<div class="empty">Inga schemalagda matcher. Generera grupper för att börja.</div>`;
@@ -951,7 +965,7 @@ function renderDashboard() {
     upEl.innerHTML = upcoming.map(m => {
       const p1 = getPlayer(m.p1), p2 = getPlayer(m.p2);
       if (!p1 || !p2) return '';
-      const tag = m.stage === 'group' ? `Grupp ${m.groupId} · O${m.round}` : ({quarter:'Kvart',semi:'Semi',final:'Final',third:'Brons'}[m.stage] || m.stage);
+      const tag = m.stage === 'group' ? `Plan ${m.groupId} · O${m.round}` : ({quarter:'Kvart',semi:'Semi',final:'Final',third:'Brons'}[m.stage] || m.stage);
       return `<div class="recent-row" data-match-id="${m.id}" style="cursor:pointer">
         <div class="name">${escapeHtml(p1.emoji)} ${escapeHtml(p1.name)}</div>
         <div class="score-mini" style="font-family:'Inter'; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">${tag}</div>
