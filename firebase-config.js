@@ -18,10 +18,7 @@
 window.FIREBASE_CONFIG = {
   apiKey: "AIzaSyBkYvkajM33-reGv0LiLpUw6x5VAwn6d88",
   authDomain: "fifatest-3f3e9.firebaseapp.com",
-  // LÄGG IN DIN DATABASE-URL HÄR efter att du skapat Realtime Database
-  // T.ex. "https://fifatest-3f3e9-default-rtdb.europe-west1.firebasedatabase.app"
-  // Utan denna rad körs sajten i lokal-läge (ingen sync).
-  // databaseURL: "",
+  databaseURL: "https://fifatest-3f3e9-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "fifatest-3f3e9",
   storageBucket: "fifatest-3f3e9.firebasestorage.app",
   messagingSenderId: "903453877653",
