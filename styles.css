@@ -351,6 +351,51 @@ body {
   color: white;
 }
 
+.btn-anthem {
+  background: linear-gradient(135deg, var(--pink), var(--accent));
+  color: white;
+  box-shadow: 0 4px 0 #B3265C;
+  position: relative;
+  overflow: hidden;
+}
+.btn-anthem:hover { box-shadow: 0 5px 0 #B3265C; }
+.btn-anthem:active { box-shadow: 0 1px 0 #B3265C; }
+.btn-anthem.playing {
+  animation: anthem-pulse 1.4s ease-in-out infinite;
+}
+@keyframes anthem-pulse {
+  0%, 100% { box-shadow: 0 4px 0 #B3265C, 0 0 0 0 rgba(255,62,128,0.5); }
+  50% { box-shadow: 0 4px 0 #B3265C, 0 0 0 14px rgba(255,62,128,0); }
+}
+
+/* Mode toggle (segment control) */
+.mode-toggle {
+  display: inline-flex;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.mode-btn {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 7px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.mode-btn:hover { color: var(--text); }
+.mode-btn.active {
+  background: var(--primary);
+  color: var(--primary-ink);
+}
+
 /* ---------- Forms ---------- */
 .form-row {
   display: grid;
@@ -415,6 +460,7 @@ input[type="number"] { font-family: 'JetBrains Mono', monospace; }
   font-weight: 600;
   color: var(--muted);
 }
+.settings-grid label[hidden] { display: none; }
 
 .actions-row {
   display: flex;
@@ -885,6 +931,122 @@ input[type="number"] { font-family: 'JetBrains Mono', monospace; }
   justify-content: space-between;
   gap: 10px;
   margin-top: 12px;
+}
+
+/* ---------- Mini Audio Player ---------- */
+.mini-player {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, var(--card-2), var(--card));
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,214,10,0.1);
+  z-index: 150;
+  min-width: 320px;
+  max-width: 420px;
+  animation: slideUp 0.3s ease;
+}
+.mini-player[hidden] { display: none; }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.mini-player.playing {
+  border-color: var(--pink);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 30px rgba(255,62,128,0.25);
+}
+.mini-play {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-ink);
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.mini-play:hover { transform: scale(1.08); }
+.mini-play .pause-icon[hidden],
+.mini-play .play-icon[hidden] { display: none; }
+.mini-info { flex: 1; min-width: 0; }
+.mini-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mini-title::before {
+  content: '🎵';
+  margin-right: 6px;
+}
+.mini-sub {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 2px;
+}
+.mini-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.mini-controls input[type="range"] {
+  width: 70px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 999px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.mini-controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.mini-controls input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+.mini-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 22px;
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+}
+.mini-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+
+@media (max-width: 600px) {
+  .mini-player {
+    left: 12px;
+    right: 12px;
+    min-width: 0;
+    max-width: none;
+  }
+  .mini-controls input[type="range"] { width: 50px; }
 }
 
 /* ---------- Toast ---------- */

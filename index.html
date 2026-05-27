@@ -32,6 +32,7 @@
         <div class="status-pill" id="tournamentStatus">🟢 Bygglov beviljat</div>
         <button class="btn btn-ghost btn-sm" id="resetBtn" title="Rensa allt och börja om">🧨 Riv allt</button>
       </div>
+      <audio id="kickoffAudio" src="audio/plan-b-kickoff.mp3" preload="metadata" loop></audio>
     </div>
   </header>
 
@@ -56,6 +57,7 @@
           <div class="hero-actions">
             <button class="btn btn-primary" data-go="spelare">➕ Lägg till spelare</button>
             <button class="btn btn-secondary" data-go="grupper">📊 Visa grupper</button>
+            <button class="btn btn-anthem" id="heroKickoffBtn">🎵 Sätt på Plan B-låten</button>
           </div>
         </div>
         <div class="hero-stats">
@@ -135,9 +137,17 @@
 
       <div class="card">
         <h3 class="card-title">⚙️ Turneringsinställningar</h3>
+        <div class="mode-toggle" role="tablist" aria-label="Grupp-läge">
+          <button type="button" class="mode-btn active" data-mode="count">Välj antal grupper</button>
+          <button type="button" class="mode-btn" data-mode="size">Välj spelare per grupp</button>
+        </div>
         <div class="settings-grid">
-          <label>
-            <span>Antal spelare per grupp</span>
+          <label data-mode-field="count">
+            <span>Antal grupper</span>
+            <input type="number" id="groupCount" min="1" max="16" value="2" />
+          </label>
+          <label data-mode-field="size" hidden>
+            <span>Spelare per grupp</span>
             <input type="number" id="groupSize" min="2" max="12" value="4" />
           </label>
           <label>
@@ -253,6 +263,22 @@
 
   <!-- Toast -->
   <div id="toast" class="toast" hidden></div>
+
+  <!-- Flytande musikspelare -->
+  <div class="mini-player" id="miniPlayer" hidden>
+    <button class="mini-play" id="miniPlayBtn" aria-label="Spela/pausa">
+      <span class="play-icon">▶</span>
+      <span class="pause-icon" hidden>⏸</span>
+    </button>
+    <div class="mini-info">
+      <div class="mini-title">Plan B Kickoff</div>
+      <div class="mini-sub" id="miniTime">0:00 / 0:00</div>
+    </div>
+    <div class="mini-controls">
+      <input type="range" id="miniVolume" min="0" max="100" value="70" title="Volym" />
+      <button class="mini-close" id="miniCloseBtn" aria-label="Stäng spelaren" title="Stäng">×</button>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

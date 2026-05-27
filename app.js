@@ -28,6 +28,8 @@ const HUMOR_TOASTS = [
 const defaultState = {
   settings: {
     name: 'Plan B FIFA Cup',
+    groupMode: 'count',  // 'count' | 'size'
+    groupCount: 2,
     groupSize: 4,
     matchLength: 6,
     advanceCount: 2,
@@ -45,7 +47,9 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return structuredClone(defaultState);
     const parsed = JSON.parse(raw);
-    return { ...structuredClone(defaultState), ...parsed };
+    const merged = { ...structuredClone(defaultState), ...parsed };
+    merged.settings = { ...defaultState.settings, ...(parsed.settings || {}) };
+    return merged;
   } catch (e) {
     console.error('Kunde inte läsa state:', e);
     return structuredClone(defaultState);
@@ -151,6 +155,30 @@ function initPlayers() {
     e.target.value = state.settings.groupSize;
   });
   $('#groupSize').addEventListener('input', onGroupSizeChange);
+
+  const onGroupCountChange = e => {
+    let val = parseInt(e.target.value);
+    if (Number.isNaN(val)) val = 2;
+    val = Math.max(1, Math.min(16, val));
+    state.settings.groupCount = val;
+    saveState();
+    updateGenerateInfo();
+  };
+  $('#groupCount').addEventListener('change', e => {
+    onGroupCountChange(e);
+    e.target.value = state.settings.groupCount;
+  });
+  $('#groupCount').addEventListener('input', onGroupCountChange);
+
+  $$('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      state.settings.groupMode = mode;
+      saveState();
+      syncGroupModeUI();
+      updateGenerateInfo();
+    });
+  });
   $('#matchLength').addEventListener('change', e => {
     state.settings.matchLength = parseInt(e.target.value) || 6;
     saveState();
@@ -216,29 +244,43 @@ function renderPlayers() {
 
   // Sync inputs
   $('#groupSize').value = state.settings.groupSize;
+  $('#groupCount').value = state.settings.groupCount;
   $('#matchLength').value = state.settings.matchLength;
   $('#advanceCount').value = state.settings.advanceCount;
+  syncGroupModeUI();
   updateGenerateInfo();
 }
 
-function computeGroupSplit(n, targetSize) {
+function computeGroupSplit(n) {
   if (n < 2) return { numGroups: 0, sizes: [] };
-  const numGroups = Math.max(1, Math.round(n / targetSize));
+  let numGroups;
+  if (state.settings.groupMode === 'count') {
+    numGroups = Math.max(1, Math.min(n, state.settings.groupCount));
+  } else {
+    numGroups = Math.max(1, Math.round(n / state.settings.groupSize));
+  }
   const base = Math.floor(n / numGroups);
   const extra = n % numGroups;
   const sizes = Array.from({length: numGroups}, (_, i) => base + (i < extra ? 1 : 0));
   return { numGroups, sizes };
 }
 
+function syncGroupModeUI() {
+  const mode = state.settings.groupMode || 'count';
+  $$('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  $$('[data-mode-field]').forEach(el => {
+    el.hidden = el.dataset.modeField !== mode;
+  });
+}
+
 function updateGenerateInfo() {
   const info = $('#generateInfo');
   const n = state.players.length;
-  const gs = state.settings.groupSize;
   if (n < 2) {
     info.textContent = `Du behöver minst 2 spelare för att köra en turnering. (Just nu: ${n})`;
     return;
   }
-  const { numGroups, sizes } = computeGroupSplit(n, gs);
+  const { numGroups, sizes } = computeGroupSplit(n);
   const minSize = Math.min(...sizes);
   const maxSize = Math.max(...sizes);
   const sizeText = minSize === maxSize ? `${minSize}` : `${minSize}–${maxSize}`;
@@ -246,7 +288,7 @@ function updateGenerateInfo() {
   if (minSize === maxSize) {
     txt += '. Perfekt fördelning. 🎯';
   } else {
-    txt += ` (sizes: ${sizes.join(' + ')}).`;
+    txt += ` (storlek: ${sizes.join(' + ')}).`;
   }
   info.textContent = txt;
 }
@@ -254,7 +296,6 @@ function updateGenerateInfo() {
 // ---------- Group + schedule generation ----------
 function generateGroupsAndSchedule() {
   const n = state.players.length;
-  const gs = state.settings.groupSize;
   if (n < 2) {
     toast(`Behöver minst 2 spelare. Just nu: ${n}.`);
     return;
@@ -264,7 +305,7 @@ function generateGroupsAndSchedule() {
   }
 
   const shuffled = shuffle(state.players);
-  const { numGroups } = computeGroupSplit(n, gs);
+  const { numGroups } = computeGroupSplit(n);
   const groups = [];
   for (let i = 0; i < numGroups; i++) {
     groups.push({ id: String.fromCharCode(65 + i), playerIds: [] });
@@ -1027,6 +1068,80 @@ function renderStats() {
   }
 }
 
+// ---------- Audio: Plan B Kickoff anthem ----------
+function initAudio() {
+  const audio = $('#kickoffAudio');
+  const player = $('#miniPlayer');
+  const playBtn = $('#miniPlayBtn');
+  const heroBtn = $('#heroKickoffBtn');
+  const volume = $('#miniVolume');
+  const closeBtn = $('#miniCloseBtn');
+  const playIcon = playBtn.querySelector('.play-icon');
+  const pauseIcon = playBtn.querySelector('.pause-icon');
+  const timeEl = $('#miniTime');
+
+  audio.volume = (parseInt(volume.value) || 70) / 100;
+
+  const fmt = sec => {
+    if (!isFinite(sec)) return '0:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${String(s).padStart(2, '0')}`;
+  };
+
+  const updatePlayState = () => {
+    const playing = !audio.paused;
+    playIcon.hidden = playing;
+    pauseIcon.hidden = !playing;
+    player.classList.toggle('playing', playing);
+    if (heroBtn) {
+      heroBtn.classList.toggle('playing', playing);
+      heroBtn.textContent = playing ? '⏸ Pausa Plan B-låten' : '🎵 Sätt på Plan B-låten';
+    }
+  };
+
+  const showPlayer = () => { player.hidden = false; };
+
+  const togglePlay = async () => {
+    showPlayer();
+    if (audio.paused) {
+      try {
+        await audio.play();
+        toast('🎵 Hörnflagga, hörn-flagga. Plan B-låten är på!');
+      } catch (e) {
+        toast('⚠️ Kunde inte spela låten — webbläsaren blockerade. Klicka igen.');
+      }
+    } else {
+      audio.pause();
+    }
+  };
+
+  playBtn.addEventListener('click', togglePlay);
+  if (heroBtn) heroBtn.addEventListener('click', togglePlay);
+
+  audio.addEventListener('play', updatePlayState);
+  audio.addEventListener('pause', updatePlayState);
+  audio.addEventListener('ended', updatePlayState);
+
+  audio.addEventListener('timeupdate', () => {
+    timeEl.textContent = `${fmt(audio.currentTime)} / ${fmt(audio.duration)}`;
+  });
+  audio.addEventListener('loadedmetadata', () => {
+    timeEl.textContent = `0:00 / ${fmt(audio.duration)}`;
+  });
+
+  volume.addEventListener('input', () => {
+    audio.volume = (parseInt(volume.value) || 0) / 100;
+  });
+
+  closeBtn.addEventListener('click', () => {
+    audio.pause();
+    audio.currentTime = 0;
+    player.hidden = true;
+    updatePlayState();
+  });
+}
+
 // ---------- Reset ----------
 function initReset() {
   $('#resetBtn').addEventListener('click', () => {
@@ -1057,6 +1172,7 @@ function init() {
   initSchedule();
   initModal();
   initKnockout();
+  initAudio();
   initReset();
   renderAll();
 }
