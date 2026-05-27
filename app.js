@@ -57,6 +57,9 @@ function loadState() {
 }
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (window.PlanBSync && window.PlanBSync.push) {
+    window.PlanBSync.push(state);
+  }
 }
 
 // ---------- Utils ----------
@@ -1179,6 +1182,44 @@ function renderAll() {
   renderStats();
 }
 
+// ---------- Sync (Firebase live-sync, optional) ----------
+function initSync() {
+  const pill = $('#syncStatus');
+  if (!pill) return;
+
+  const apply = (s) => {
+    pill.classList.remove('off', 'connecting', 'live', 'error');
+    pill.classList.add(s.status);
+    const labels = {
+      off: '⚪ Lokal',
+      connecting: 'Kopplar upp…',
+      live: `Live · ${window.TOURNAMENT_ID || 'default'}`,
+      error: 'Sync-fel',
+    };
+    pill.textContent = labels[s.status] || s.status;
+    pill.title = s.info || '';
+  };
+
+  // Lyssna på status från sync.js
+  window.addEventListener('planb:sync-status', e => apply(e.detail));
+
+  // Hantera incoming state från andra enheter
+  if (window.PlanBSync) {
+    if (window.PlanBSync.status) apply({ status: window.PlanBSync.status });
+    if (window.PlanBSync.onRemote) {
+      window.PlanBSync.onRemote(remoteState => {
+        if (!remoteState) return;
+        // Slå ihop nya defaults så fält som lagts till senare inte saknas
+        state = { ...structuredClone(defaultState), ...remoteState };
+        state.settings = { ...defaultState.settings, ...(remoteState.settings || {}) };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        renderAll();
+        toast('🔄 Uppdaterat från en annan enhet.');
+      });
+    }
+  }
+}
+
 // ---------- Init ----------
 function init() {
   initTabs();
@@ -1188,6 +1229,7 @@ function init() {
   initKnockout();
   initAudio();
   initReset();
+  initSync();
   renderAll();
 }
 

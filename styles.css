@@ -130,6 +130,31 @@ body {
   font-size: 13px;
   font-weight: 600;
 }
+.sync-pill {
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: help;
+  transition: all 0.15s ease;
+}
+.sync-pill.live {
+  background: rgba(6, 214, 160, 0.12);
+  border-color: var(--success);
+  color: var(--success);
+}
+.sync-pill.live::before { content: '🟢 '; }
+.sync-pill.connecting { color: var(--info); }
+.sync-pill.connecting::before { content: '🔵 '; }
+.sync-pill.error {
+  background: rgba(239, 71, 111, 0.12);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.sync-pill.error::before { content: '🔴 '; }
+.sync-pill.off::before { content: '⚪ '; }
 
 /* ---------- Tabs ---------- */
 .tabs {

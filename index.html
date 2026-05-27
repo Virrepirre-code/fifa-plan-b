@@ -29,6 +29,7 @@
         </div>
       </div>
       <div class="header-meta">
+        <div class="sync-pill" id="syncStatus" title="Live sync-status">⚪ Lokal</div>
         <div class="status-pill" id="tournamentStatus">🟢 Bygglov beviljat</div>
         <button class="btn btn-ghost btn-sm" id="resetBtn" title="Rensa allt och börja om">🧨 Riv allt</button>
       </div>
@@ -280,6 +281,8 @@
     </div>
   </div>
 
+  <script src="firebase-config.js"></script>
+  <script type="module" src="sync.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
