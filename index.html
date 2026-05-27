@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plan B FIFA Cup – När Plan A går åt skogen</title>
+  <meta name="description" content="FIFA-turnering på Plan B. Grupper, spelschema, resultat och slutspel." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E⚽%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+  <!-- Konstruktionstejp i toppen -->
+  <div class="caution-tape" aria-hidden="true">
+    <span>⚠ BYGGARBETSPLATS ⚠ FIFA-TURNERING PÅGÅR ⚠ HJÄLM REKOMMENDERAS ⚠ INGA RITNINGSÄNDRINGAR EFTER PUSSELSLAG ⚠ BYGGARBETSPLATS ⚠ FIFA-TURNERING PÅGÅR ⚠ HJÄLM REKOMMENDERAS ⚠ INGA RITNINGSÄNDRINGAR EFTER PUSSELSLAG ⚠</span>
+  </div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">
+          <span class="brand-b">B</span>
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-title">Plan B <span class="accent">FIFA Cup</span></h1>
+          <p class="brand-tagline">När din taktik på jobbet inte funkar — testa den på PlayStation.</p>
+        </div>
+      </div>
+      <div class="header-meta">
+        <div class="status-pill" id="tournamentStatus">🟢 Bygglov beviljat</div>
+        <button class="btn btn-ghost btn-sm" id="resetBtn" title="Rensa allt och börja om">🧨 Riv allt</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs container" role="tablist">
+    <button class="tab active" data-tab="hem" role="tab">🏠 Hem</button>
+    <button class="tab" data-tab="spelare" role="tab">👷 Spelare</button>
+    <button class="tab" data-tab="grupper" role="tab">📊 Grupper</button>
+    <button class="tab" data-tab="schema" role="tab">📅 Spelschema</button>
+    <button class="tab" data-tab="slutspel" role="tab">🏆 Slutspel</button>
+    <button class="tab" data-tab="statistik" role="tab">📈 Statistik</button>
+  </nav>
+
+  <main class="container">
+
+    <!-- HEM -->
+    <section class="tab-panel active" data-panel="hem">
+      <div class="hero">
+        <div class="hero-content">
+          <span class="kicker">⚽ Plan B presenterar</span>
+          <h2 class="hero-title">Stomljuds&shy;mästerskapet <span class="strike">i samhälls&shy;byggnad</span> i FIFA</h2>
+          <p class="hero-sub">Vi har lagt ner mer tid på det här än på den senaste klarrapporten. Värt det? Förmodligen.</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary" data-go="spelare">➕ Lägg till spelare</button>
+            <button class="btn btn-secondary" data-go="grupper">📊 Visa grupper</button>
+          </div>
+        </div>
+        <div class="hero-stats">
+          <div class="stat-card">
+            <div class="stat-num" id="stat-players">0</div>
+            <div class="stat-label">Anlitade spelare</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-matches">0</div>
+            <div class="stat-label">Matcher i tidplanen</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-played">0</div>
+            <div class="stat-label">Färdigställda matcher</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-goals">0</div>
+            <div class="stat-label">Mål (i.e. avvikelser)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 class="card-title">📋 Senaste resultaten</h3>
+          <div id="recentResults" class="recent-list">
+            <div class="empty">Inga matcher spelade än. Som ett bygge utan tidplan.</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="card-title">⏭️ Nästa upp i kön</h3>
+          <div id="upcomingMatches" class="recent-list">
+            <div class="empty">Lägg till spelare och generera grupper för att komma igång.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card humor-card">
+        <h3 class="card-title">📜 Husregler (icke förhandlingsbara)</h3>
+        <ul class="rules">
+          <li><span class="rule-num">1.</span> Matchlängd: <strong id="rule-length">6</strong> minuter per halvlek. Förlängning bara i slutspel.</li>
+          <li><span class="rule-num">2.</span> Lagval: slumpa eller välj — men <em>inte</em> samma lag som motståndaren. Ingen <strong>Real-derby-feghet</strong>.</li>
+          <li><span class="rule-num">3.</span> <strong>Sliding tackle-spam</strong> ger gult kort socialt. Tre gulingar = du köper fika.</li>
+          <li><span class="rule-num">4.</span> Pausar du för att kolla taktiken: motståndaren får en frispark <em>och</em> rätten att håna dig.</li>
+          <li><span class="rule-num">5.</span> Vid oavgjort i gruppspelet får båda 1 poäng. Vid oavgjort i slutspelet: <strong>straffar</strong>. Vid oavgjort i straffar: <strong>sten-sax-påse, bäst av fem</strong>.</li>
+          <li><span class="rule-num">6.</span> Resultat förs in direkt efter matchen. Inga "vi tar det sen" — det är inte ett ÄTA.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SPELARE -->
+    <section class="tab-panel" data-panel="spelare">
+      <div class="card">
+        <h3 class="card-title">👷 Anlita spelare</h3>
+        <p class="muted">Lägg till alla som ska vara med. Klicka på namnet senare för att redigera eller sparka.</p>
+        <form id="addPlayerForm" class="form-row">
+          <input type="text" id="playerName" placeholder="Namn (t.ex. Anna)" required maxlength="30" />
+          <input type="text" id="playerTeam" placeholder="Favoritlag (valfritt, t.ex. Hammarby)" maxlength="30" />
+          <input type="text" id="playerEmoji" placeholder="Emoji" maxlength="4" value="⚽" />
+          <button type="submit" class="btn btn-primary">Lägg till</button>
+        </form>
+        <div class="quick-add">
+          <span class="muted">Snabbtillägg:</span>
+          <button type="button" class="chip" data-quick-name>🎲 Slumpa Plan B-namn</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">📇 Spelarlista</h3>
+          <span class="badge" id="playerCount">0 spelare</span>
+        </div>
+        <div id="playersList" class="players-grid">
+          <div class="empty">Ingen är inplanerad än. Som en bygglovsansökan i juli.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">⚙️ Turneringsinställningar</h3>
+        <div class="settings-grid">
+          <label>
+            <span>Antal spelare per grupp</span>
+            <select id="groupSize">
+              <option value="3">3</option>
+              <option value="4" selected>4 (rekommenderas)</option>
+              <option value="5">5</option>
+            </select>
+          </label>
+          <label>
+            <span>Matchlängd (min/halvlek)</span>
+            <input type="number" id="matchLength" min="3" max="20" value="6" />
+          </label>
+          <label>
+            <span>Antal som går vidare per grupp</span>
+            <select id="advanceCount">
+              <option value="1">1 (cup-mode)</option>
+              <option value="2" selected>2 (klassiskt)</option>
+            </select>
+          </label>
+        </div>
+        <div class="actions-row">
+          <button class="btn btn-primary" id="generateGroupsBtn">🎲 Slumpa grupper & generera spelschema</button>
+          <button class="btn btn-ghost" id="clearGroupsBtn">🗑️ Rensa grupper & matcher</button>
+        </div>
+        <p class="muted small" id="generateInfo">Tips: 8, 12 eller 16 spelare ger snyggaste gruppspel.</p>
+      </div>
+    </section>
+
+    <!-- GRUPPER -->
+    <section class="tab-panel" data-panel="grupper">
+      <div id="groupsContainer">
+        <div class="card empty-card">
+          <h3>Inga grupper inplanerade än.</h3>
+          <p class="muted">Lägg till spelare och tryck på "Slumpa grupper" under <strong>Spelare</strong>-fliken.</p>
+          <button class="btn btn-primary" data-go="spelare">Till spelarfliken</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SPELSCHEMA -->
+    <section class="tab-panel" data-panel="schema">
+      <div class="schema-header">
+        <h2 class="section-title">📅 Spelschema <span class="muted">/ tidplan utan slack</span></h2>
+        <div class="schema-filters">
+          <button class="chip chip-toggle active" data-filter="all">Alla</button>
+          <button class="chip chip-toggle" data-filter="upcoming">Återstår</button>
+          <button class="chip chip-toggle" data-filter="played">Spelade</button>
+        </div>
+      </div>
+      <div id="scheduleContainer">
+        <div class="card empty-card">
+          <h3>Inga matcher i schemat.</h3>
+          <p class="muted">Generera grupper först så fyller vi tidplanen.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLUTSPEL -->
+    <section class="tab-panel" data-panel="slutspel">
+      <div class="schema-header">
+        <h2 class="section-title">🏆 Slutspel <span class="muted">/ stadiet där egots BIM-modell krockar med verkligheten</span></h2>
+        <button class="btn btn-primary" id="generateKnockoutBtn">⚒️ Generera slutspel</button>
+      </div>
+      <div id="knockoutContainer">
+        <div class="card empty-card">
+          <h3>Slutspelet är inte byggt än.</h3>
+          <p class="muted">Spela klart gruppspelet, sen trycker du på "Generera slutspel".</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATISTIK -->
+    <section class="tab-panel" data-panel="statistik">
+      <h2 class="section-title">📈 Statistik <span class="muted">/ KPI:er ingen bad om</span></h2>
+      <div class="grid-3" id="awardsGrid">
+        <!-- fylls i av JS -->
+      </div>
+      <div class="card">
+        <h3 class="card-title">🥇 Skytteliga / Topp-presterande</h3>
+        <div id="topScorers" class="recent-list">
+          <div class="empty">Spela några matcher så fyller vi den här. Mål måste registreras per spelare i matchen.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Match-modal -->
+  <div class="modal-backdrop" id="matchModal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="modalTitle">
+      <button class="modal-close" id="modalCloseBtn" aria-label="Stäng">×</button>
+      <h3 id="modalTitle">Matchresultat</h3>
+      <p class="muted" id="modalSub">Lägg in resultatet. Inga sena ändringar.</p>
+      <div class="match-form">
+        <div class="match-side">
+          <div class="match-player-name" id="modalP1Name"></div>
+          <input type="number" id="modalScore1" min="0" max="99" placeholder="0" class="score-input" />
+        </div>
+        <div class="vs-divider">vs</div>
+        <div class="match-side">
+          <div class="match-player-name" id="modalP2Name"></div>
+          <input type="number" id="modalScore2" min="0" max="99" placeholder="0" class="score-input" />
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="modalClearBtn">Nollställ match</button>
+        <button class="btn btn-primary" id="modalSaveBtn">💾 Spara resultat</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>Byggd av Plan B-andan: 90% improvisation, 10% Excel-formler. <br>
+      Data sparas lokalt i din webbläsare — ingen molnritning hänger med över datorbyten.</p>
+      <p class="muted small">⚽ Plan B FIFA Cup · planbab.se</p>
+    </div>
+  </footer>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
