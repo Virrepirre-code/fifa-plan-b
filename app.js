@@ -215,34 +215,18 @@ function renderPlayers() {
   }
 
   list.innerHTML = state.players.map(p => `
-    <div class="player-card" data-player-id="${p.id}">
+    <div class="player-card" data-player-id="${p.id}" title="Klicka för att redigera">
       <div class="player-emoji">${escapeHtml(p.emoji)}</div>
-      <div>
+      <div class="player-body">
         <div class="player-name">${escapeHtml(p.name)}</div>
         <div class="player-team">${escapeHtml(p.team) || 'Inget favoritlag valt'}</div>
+        ${p.motto ? `<div class="player-motto">${escapeHtml(p.motto)}</div>` : ''}
       </div>
-      <button class="player-remove" data-remove-player="${p.id}" title="Ta bort">✕</button>
     </div>
   `).join('');
 
-  $$('[data-remove-player]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const id = btn.dataset.removePlayer;
-      const p = getPlayer(id);
-      if (!p) return;
-      const inUse = state.groups.length > 0 || state.matches.length > 0;
-      if (inUse && !confirm(`Ta bort ${p.name}? Detta påverkar grupper/matcher och de kommer rensas.`)) return;
-      state.players = state.players.filter(x => x.id !== id);
-      if (inUse) {
-        state.groups = [];
-        state.matches = [];
-        state.knockoutGenerated = false;
-      }
-      saveState();
-      renderAll();
-      toast(`👋 ${p.name} är ute.`);
-    });
+  $$('.player-card').forEach(card => {
+    card.addEventListener('click', () => openPlayerModal(card.dataset.playerId));
   });
 
   // Sync inputs
@@ -594,6 +578,126 @@ function attachMatchClicks(scope = document) {
   $$('.match-row', scope).forEach(row => {
     row.addEventListener('click', () => openMatchModal(row.dataset.matchId));
   });
+}
+
+// ---------- Player edit modal ----------
+const EMOJI_OPTIONS = [
+  '⚽','🦊','🚀','🐻','🦄','🦅','🎩','🎯','🔥','💀','👑','🐉',
+  '🦁','🐅','🐺','🐢','🦏','🐙','🦈','🤖','👽','🥷','🧙','🧛',
+  '🦸','🧟','🍕','🍻','🌮','🦖','⚡','💣','🧨','🚨','💎','🌶️',
+];
+let currentPlayerId = null;
+
+function initPlayerModal() {
+  $('#playerModalCloseBtn').addEventListener('click', closePlayerModal);
+  $('#playerModal').addEventListener('click', e => {
+    if (e.target === $('#playerModal')) closePlayerModal();
+  });
+  $('#playerEditSaveBtn').addEventListener('click', savePlayerEdit);
+  $('#playerEditRemoveBtn').addEventListener('click', removePlayerFromModal);
+
+  // Live-preview av emoji-input
+  $('#playerEditEmoji').addEventListener('input', e => {
+    const val = e.target.value.trim() || '⚽';
+    $('#playerModalEmoji').textContent = val;
+    refreshEmojiPickerSelection();
+  });
+
+  // Bygg emoji-pickern en gång
+  const picker = $('#emojiPicker');
+  picker.innerHTML = EMOJI_OPTIONS.map(e => `<button type="button" class="emoji-btn" data-emoji="${e}">${e}</button>`).join('');
+  picker.addEventListener('click', e => {
+    const btn = e.target.closest('.emoji-btn');
+    if (!btn) return;
+    $('#playerEditEmoji').value = btn.dataset.emoji;
+    $('#playerEditEmoji').dispatchEvent(new Event('input'));
+  });
+}
+
+function refreshEmojiPickerSelection() {
+  const current = $('#playerEditEmoji').value.trim();
+  $$('#emojiPicker .emoji-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.emoji === current);
+  });
+}
+
+function openPlayerModal(playerId) {
+  const p = getPlayer(playerId);
+  if (!p) return;
+  currentPlayerId = playerId;
+
+  // Räkna ut record
+  const playedMatches = state.matches.filter(m => m.played && (m.p1 === playerId || m.p2 === playerId));
+  let w = 0, l = 0, d = 0, gf = 0, ga = 0;
+  playedMatches.forEach(m => {
+    const isP1 = m.p1 === playerId;
+    const my = isP1 ? m.s1 : m.s2;
+    const opp = isP1 ? m.s2 : m.s1;
+    gf += my; ga += opp;
+    if (my > opp) w++;
+    else if (my < opp) l++;
+    else d++;
+  });
+  const recordText = playedMatches.length > 0
+    ? `${playedMatches.length} matcher · ${w}V ${d}O ${l}F · ${gf}–${ga} mål`
+    : 'Inga matcher spelade än. Profilbestämmer.';
+
+  $('#playerModalTitle').textContent = p.name;
+  $('#playerModalEmoji').textContent = p.emoji || '⚽';
+  $('#playerModalRecord').textContent = recordText;
+  $('#playerEditName').value = p.name;
+  $('#playerEditEmoji').value = p.emoji || '⚽';
+  $('#playerEditTeam').value = p.team || '';
+  $('#playerEditMotto').value = p.motto || '';
+  refreshEmojiPickerSelection();
+
+  $('#playerModal').hidden = false;
+  setTimeout(() => $('#playerEditName').focus(), 50);
+}
+
+function closePlayerModal() {
+  $('#playerModal').hidden = true;
+  currentPlayerId = null;
+}
+
+function savePlayerEdit() {
+  if (!currentPlayerId) return;
+  const p = getPlayer(currentPlayerId);
+  if (!p) return;
+  const name = $('#playerEditName').value.trim();
+  if (!name) {
+    toast('⚠️ Namn får inte vara tomt.');
+    return;
+  }
+  p.name = name;
+  p.emoji = $('#playerEditEmoji').value.trim() || '⚽';
+  p.team = $('#playerEditTeam').value.trim();
+  p.motto = $('#playerEditMotto').value.trim();
+  saveState();
+  closePlayerModal();
+  renderAll();
+  toast(`✅ ${p.name}s profil uppdaterad.`);
+}
+
+function removePlayerFromModal() {
+  if (!currentPlayerId) return;
+  const p = getPlayer(currentPlayerId);
+  if (!p) return;
+  const inUse = state.groups.length > 0 || state.matches.length > 0;
+  const msg = inUse
+    ? `Sparka ${p.name}? Detta rensar alla grupper och matcher (resultat förloras).`
+    : `Sparka ${p.name}?`;
+  if (!confirm(msg)) return;
+  state.players = state.players.filter(x => x.id !== currentPlayerId);
+  if (inUse) {
+    state.groups = [];
+    state.matches = [];
+    state.knockoutGenerated = false;
+  }
+  saveState();
+  closePlayerModal();
+  renderAll();
+  toast(`👋 ${p.name} är ute.`);
 }
 
 // ---------- Match modal ----------
@@ -1226,6 +1330,7 @@ function init() {
   initPlayers();
   initSchedule();
   initModal();
+  initPlayerModal();
   initKnockout();
   initAudio();
   initReset();

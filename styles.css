@@ -497,7 +497,7 @@ input[type="number"] { font-family: 'JetBrains Mono', monospace; }
 /* ---------- Players ---------- */
 .players-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 12px;
 }
 .player-card {
@@ -506,36 +506,133 @@ input[type="number"] { font-family: 'JetBrains Mono', monospace; }
   border-radius: 12px;
   padding: 14px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   position: relative;
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.player-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+.player-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+.player-card::after {
+  content: "✏️";
+  position: absolute;
+  bottom: 10px;
+  right: 12px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.player-card:hover::after { opacity: 0.6; }
 .player-emoji {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 10px;
   background: var(--bg);
   display: grid;
   place-items: center;
-  font-size: 24px;
+  font-size: 26px;
+  flex-shrink: 0;
 }
-.player-name { font-weight: 700; font-size: 15px; }
-.player-team { font-size: 12px; color: var(--muted); }
-.player-remove {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: transparent;
-  border: none;
+.player-body { flex: 1; min-width: 0; }
+.player-name {
+  font-weight: 700;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.player-team {
+  font-size: 12px;
   color: var(--muted);
-  cursor: pointer;
-  font-size: 16px;
-  padding: 4px;
-  border-radius: 6px;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.player-remove:hover { color: var(--danger); background: rgba(239,71,111,0.1); }
+.player-motto {
+  font-size: 12px;
+  color: var(--primary);
+  margin-top: 6px;
+  font-style: italic;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.player-motto::before { content: '“'; }
+.player-motto::after { content: '”'; }
+.player-remove {
+  display: none; /* Hanteras nu via modal-knappen */
+}
+
+/* ---------- Player edit modal ---------- */
+.modal-wide { max-width: 580px; }
+.player-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.player-modal-emoji {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: var(--bg);
+  display: grid;
+  place-items: center;
+  font-size: 36px;
+  flex-shrink: 0;
+}
+.player-modal-header h3 {
+  font-family: 'Anton', sans-serif;
+  font-size: 26px;
+  margin: 2px 0 4px;
+}
+.player-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.player-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.emoji-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.emoji-picker .emoji-btn {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+.emoji-picker .emoji-btn:hover { background: var(--card-2); }
+.emoji-picker .emoji-btn.selected {
+  border-color: var(--primary);
+  background: rgba(255, 214, 10, 0.15);
+}
 
 .badge {
   background: var(--bg);
