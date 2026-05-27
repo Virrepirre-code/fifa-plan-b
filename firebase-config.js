@@ -16,13 +16,16 @@
  * ---------------------------------------------------------------- */
 
 window.FIREBASE_CONFIG = {
-  // apiKey: "AIzaSy...",
-  // authDomain: "plan-b-fifa-cup.firebaseapp.com",
-  // databaseURL: "https://plan-b-fifa-cup-default-rtdb.europe-west1.firebasedatabase.app",
-  // projectId: "plan-b-fifa-cup",
-  // storageBucket: "plan-b-fifa-cup.appspot.com",
-  // messagingSenderId: "...",
-  // appId: "1:..."
+  apiKey: "AIzaSyBkYvkajM33-reGv0LiLpUw6x5VAwn6d88",
+  authDomain: "fifatest-3f3e9.firebaseapp.com",
+  // LÄGG IN DIN DATABASE-URL HÄR efter att du skapat Realtime Database
+  // T.ex. "https://fifatest-3f3e9-default-rtdb.europe-west1.firebasedatabase.app"
+  // Utan denna rad körs sajten i lokal-läge (ingen sync).
+  // databaseURL: "",
+  projectId: "fifatest-3f3e9",
+  storageBucket: "fifatest-3f3e9.firebasestorage.app",
+  messagingSenderId: "903453877653",
+  appId: "1:903453877653:web:a13e06598cfc83bafb829c",
 };
 
 // Turnerings-ID: alla som öppnar samma URL med samma #hash delar samma turnering.
