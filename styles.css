@@ -803,6 +803,8 @@ input[type="number"] { font-family: 'JetBrains Mono', monospace; }
   padding: 20px;
   animation: fade 0.2s ease;
 }
+.modal-backdrop[hidden] { display: none; }
+.toast[hidden] { display: none; }
 .modal {
   background: var(--card);
   border: 1px solid var(--border);
