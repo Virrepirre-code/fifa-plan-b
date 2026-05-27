@@ -94,6 +94,19 @@ function getPlayer(id) {
   return state.players.find(p => p.id === id);
 }
 
+// Plockar ut Spotify-track-ID ur olika URL-format:
+//   https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh
+//   https://open.spotify.com/intl-sv/track/4iV5W9uYEdYUVa79Axb7Rh?si=...
+//   spotify:track:4iV5W9uYEdYUVa79Axb7Rh
+function extractSpotifyTrackId(url) {
+  if (!url) return null;
+  const m = String(url).trim().match(/track[/:]([a-zA-Z0-9]{22})/);
+  return m ? m[1] : null;
+}
+function spotifyEmbedUrl(trackId) {
+  return `https://open.spotify.com/embed/track/${trackId}?utm_source=generator`;
+}
+
 // ---------- Tabs ----------
 function initTabs() {
   $$('.tab').forEach(tab => {
@@ -613,6 +626,11 @@ function initPlayerModal() {
     refreshEmojiPickerSelection();
   });
 
+  // Live-preview av walk-on Spotify-länk
+  $('#playerEditWalkon').addEventListener('input', e => {
+    renderWalkonPreview(e.target.value);
+  });
+
   // Bygg emoji-pickern en gång
   const picker = $('#emojiPicker');
   picker.innerHTML = EMOJI_OPTIONS.map(e => `<button type="button" class="emoji-btn" data-emoji="${e}">${e}</button>`).join('');
@@ -629,6 +647,28 @@ function refreshEmojiPickerSelection() {
   $$('#emojiPicker .emoji-btn').forEach(btn => {
     btn.classList.toggle('selected', btn.dataset.emoji === current);
   });
+}
+
+function renderWalkonPreview(url) {
+  const el = $('#walkonPreview');
+  if (!el) return;
+  const trimmed = (url || '').trim();
+  if (!trimmed) {
+    el.hidden = true;
+    el.classList.remove('invalid');
+    el.innerHTML = '';
+    return;
+  }
+  const id = extractSpotifyTrackId(trimmed);
+  if (!id) {
+    el.hidden = false;
+    el.classList.add('invalid');
+    el.textContent = '⚠️ Hittar inget Spotify-track i länken. Kopiera "Dela → Kopiera länk till låten" från Spotify.';
+    return;
+  }
+  el.hidden = false;
+  el.classList.remove('invalid');
+  el.innerHTML = `<iframe src="${spotifyEmbedUrl(id)}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
 }
 
 function openPlayerModal(playerId) {
@@ -659,7 +699,9 @@ function openPlayerModal(playerId) {
   $('#playerEditEmoji').value = p.emoji || '⚽';
   $('#playerEditTeam').value = p.team || '';
   $('#playerEditMotto').value = p.motto || '';
+  $('#playerEditWalkon').value = p.walkonUrl || '';
   refreshEmojiPickerSelection();
+  renderWalkonPreview(p.walkonUrl || '');
 
   $('#playerModal').hidden = false;
   setTimeout(() => $('#playerEditName').focus(), 50);
@@ -668,6 +710,13 @@ function openPlayerModal(playerId) {
 function closePlayerModal() {
   $('#playerModal').hidden = true;
   currentPlayerId = null;
+  // Stoppa Spotify-previewen så låten inte fortsätter spela i bakgrunden
+  const preview = $('#walkonPreview');
+  if (preview) {
+    preview.innerHTML = '';
+    preview.hidden = true;
+    preview.classList.remove('invalid');
+  }
 }
 
 function savePlayerEdit() {
@@ -683,6 +732,13 @@ function savePlayerEdit() {
   p.emoji = $('#playerEditEmoji').value.trim() || '⚽';
   p.team = $('#playerEditTeam').value.trim();
   p.motto = $('#playerEditMotto').value.trim();
+  const walkon = $('#playerEditWalkon').value.trim();
+  if (walkon && !extractSpotifyTrackId(walkon)) {
+    toast('⚠️ Spotify-länken ser inte rätt ut — sparas inte. Använd "Dela → Kopiera länk till låten".');
+    p.walkonUrl = '';
+  } else {
+    p.walkonUrl = walkon;
+  }
   saveState();
   closePlayerModal();
   renderAll();
@@ -744,13 +800,46 @@ function openMatchModal(matchId) {
   $('#modalP2Name').innerHTML = `${escapeHtml(p2.emoji)} ${escapeHtml(p2.name)}`;
   $('#modalScore1').value = m.played ? m.s1 : '';
   $('#modalScore2').value = m.played ? m.s2 : '';
+  renderMatchWalkons(p1, p2);
   $('#matchModal').hidden = false;
   setTimeout(() => $('#modalScore1').focus(), 50);
+}
+
+function renderMatchWalkons(p1, p2) {
+  const strip = $('#walkonStrip');
+  if (!strip) return;
+  const id1 = extractSpotifyTrackId(p1.walkonUrl);
+  const id2 = extractSpotifyTrackId(p2.walkonUrl);
+  if (!id1 && !id2) {
+    strip.hidden = true;
+    strip.innerHTML = '';
+    return;
+  }
+  const slot = (player, trackId) => {
+    if (!trackId) {
+      return `<div class="walkon-slot empty">
+        <div class="walkon-label">${escapeHtml(player.emoji)} ${escapeHtml(player.name)}</div>
+        <div>Ingen walk-on satt</div>
+      </div>`;
+    }
+    return `<div class="walkon-slot">
+      <div class="walkon-label">🎵 ${escapeHtml(player.emoji)} ${escapeHtml(player.name)}</div>
+      <iframe src="${spotifyEmbedUrl(trackId)}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+    </div>`;
+  };
+  strip.hidden = false;
+  strip.innerHTML = slot(p1, id1) + slot(p2, id2);
 }
 
 function closeModal() {
   $('#matchModal').hidden = true;
   currentMatchId = null;
+  // Rensa Spotify-iframes så låten stoppas direkt
+  const strip = $('#walkonStrip');
+  if (strip) {
+    strip.innerHTML = '';
+    strip.hidden = true;
+  }
 }
 
 function saveMatchResult() {

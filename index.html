@@ -236,6 +236,7 @@
       <button class="modal-close" id="modalCloseBtn" aria-label="Stäng">×</button>
       <h3 id="modalTitle">Matchresultat</h3>
       <p class="muted" id="modalSub">Lägg in resultatet. Inga sena ändringar.</p>
+      <div class="walkon-strip" id="walkonStrip" hidden></div>
       <div class="match-form">
         <div class="match-side">
           <div class="match-player-name" id="modalP1Name"></div>
@@ -292,6 +293,11 @@
         <label>
           <span>Stridsrop / motto <span class="muted small">(visas på kortet)</span></span>
           <input type="text" id="playerEditMotto" maxlength="80" placeholder='T.ex. "Aldrig en frispark"' />
+        </label>
+        <label>
+          <span>🎵 Walk-on-låt <span class="muted small">(Spotify-länk — 30 sek spelas i matchmodalen)</span></span>
+          <input type="url" id="playerEditWalkon" maxlength="300" placeholder="https://open.spotify.com/track/..." />
+          <div class="walkon-preview" id="walkonPreview" hidden></div>
         </label>
       </div>
 
