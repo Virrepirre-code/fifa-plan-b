@@ -227,19 +227,53 @@ function renderPlayers() {
     return;
   }
 
-  list.innerHTML = state.players.map(p => `
+  list.innerHTML = state.players.map(p => {
+    const trackId = extractSpotifyTrackId(p.walkonUrl);
+    return `
     <div class="player-card" data-player-id="${p.id}" title="Klicka för att redigera">
       <div class="player-emoji">${escapeHtml(p.emoji)}</div>
       <div class="player-body">
         <div class="player-name">${escapeHtml(p.name)}</div>
         <div class="player-team">${escapeHtml(p.team) || 'Inget favoritlag valt'}</div>
         ${p.motto ? `<div class="player-motto">${escapeHtml(p.motto)}</div>` : ''}
+        ${trackId ? `
+          <button class="walkon-toggle" data-walkon-toggle="${p.id}">🎵 Spela walk-on</button>
+          <div class="card-walkon" data-walkon-embed="${p.id}" hidden></div>
+        ` : ''}
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 
   $$('.player-card').forEach(card => {
     card.addEventListener('click', () => openPlayerModal(card.dataset.playerId));
+  });
+
+  // Walk-on: fäll ut/in Spotify-spelaren utan att öppna redigeringsrutan
+  $$('[data-walkon-toggle]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = btn.dataset.walkonToggle;
+      const embed = $(`[data-walkon-embed="${id}"]`);
+      const p = getPlayer(id);
+      const trackId = extractSpotifyTrackId(p?.walkonUrl);
+      if (!embed || !trackId) return;
+      if (embed.hidden) {
+        embed.innerHTML = `<iframe src="${spotifyEmbedUrl(trackId)}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
+        embed.hidden = false;
+        btn.textContent = '✕ Dölj walk-on';
+        btn.classList.add('active');
+      } else {
+        embed.innerHTML = '';
+        embed.hidden = true;
+        btn.textContent = '🎵 Spela walk-on';
+        btn.classList.remove('active');
+      }
+    });
+  });
+
+  // Klick i embed-området ska inte öppna redigeringsrutan
+  $$('.card-walkon').forEach(el => {
+    el.addEventListener('click', e => e.stopPropagation());
   });
 
   // Sync inputs
