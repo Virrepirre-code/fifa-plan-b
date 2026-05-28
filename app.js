@@ -392,6 +392,120 @@ function commitGroups(groups) {
   $('.tab[data-tab="grupper"]').click();
 }
 
+// ---------- Lottnings-ljud (Web Audio trumvirvel + talsyntes) ----------
+let drawSoundOn = true;
+let _drawAudioCtx = null;
+let _noiseBuffer = null;
+let _voices = [];
+
+function getDrawAudioCtx() {
+  try {
+    if (!_drawAudioCtx) _drawAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_drawAudioCtx.state === 'suspended') _drawAudioCtx.resume();
+    return _drawAudioCtx;
+  } catch (e) { return null; }
+}
+
+function getNoiseBuffer(ctx) {
+  if (_noiseBuffer) return _noiseBuffer;
+  const len = ctx.sampleRate;
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+  _noiseBuffer = buf;
+  return buf;
+}
+
+// Snare-liknande slag (filtrerat brus med snabb decay)
+function snareHit(ctx, time, gainVal) {
+  const src = ctx.createBufferSource();
+  src.buffer = getNoiseBuffer(ctx);
+  src.loop = true;
+  const bp = ctx.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.value = 1900;
+  bp.Q.value = 0.7;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, time);
+  g.gain.linearRampToValueAtTime(gainVal, time + 0.002);
+  g.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
+  src.connect(bp).connect(g).connect(ctx.destination);
+  src.start(time);
+  src.stop(time + 0.09);
+}
+
+// Cymbalkrasch (högpassat brus med längre decay)
+function crashHit(ctx, time) {
+  const src = ctx.createBufferSource();
+  src.buffer = getNoiseBuffer(ctx);
+  src.loop = true;
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = 5000;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, time);
+  g.gain.linearRampToValueAtTime(0.45, time + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.001, time + 1.2);
+  src.connect(hp).connect(g).connect(ctx.destination);
+  src.start(time);
+  src.stop(time + 1.3);
+}
+
+function playDrumroll(durationMs) {
+  if (!drawSoundOn) return;
+  const ctx = getDrawAudioCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const dur = durationMs / 1000;
+  let t = now;
+  let interval = 0.14;
+  while (t < now + dur) {
+    const progress = (t - now) / dur;
+    snareHit(ctx, t, 0.18 + 0.32 * progress);  // blir gradvis högre
+    t += interval;
+    interval = Math.max(0.026, interval * 0.93);  // accelererar
+  }
+}
+
+function playCrash() {
+  if (!drawSoundOn) return;
+  const ctx = getDrawAudioCtx();
+  if (!ctx) return;
+  crashHit(ctx, ctx.currentTime);
+}
+
+function loadVoices() {
+  if (!('speechSynthesis' in window)) return;
+  _voices = window.speechSynthesis.getVoices() || [];
+}
+
+function pickCoolVoice() {
+  if (!_voices.length) loadVoices();
+  const byName = n => _voices.find(v => v.name && v.name.includes(n));
+  return byName('Daniel') || byName('Google UK English Male') || byName('Alex')
+      || byName('Microsoft David') || byName('Google svenska')
+      || _voices.find(v => v.lang && v.lang.startsWith('sv'))
+      || _voices[0] || null;
+}
+
+function speakDraw(text) {
+  if (!drawSoundOn || !('speechSynthesis' in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.82;    // långsammare = mer dramatiskt
+    u.pitch = 0.7;    // djupare = coolare
+    u.volume = 1;
+    const v = pickCoolVoice();
+    if (v) u.voice = v;
+    window.speechSynthesis.speak(u);
+  } catch (e) { /* ignore */ }
+}
+
+function stopSpeak() {
+  try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
+}
+
 // ---------- Lottningsceremoni ----------
 function runDrawCeremony(groups, onComplete) {
   // Bygg dragningsordning: rotera mellan grupperna (A0, B0, C0, A1, B1...)
@@ -402,6 +516,15 @@ function runDrawCeremony(groups, onComplete) {
       if (g.playerIds[pos]) sequence.push({ playerId: g.playerIds[pos], groupId: g.id });
     }
   }
+
+  // Timing (ms) — generöst tilltaget för dramatik
+  const T_DRUMROLL = 2600;   // trumvirvel + skakning innan avslöjande
+  const T_REVEAL = 2600;     // hur länge bollen visas (täcker uppläsningen)
+  const T_CHIP = 800;        // paus efter att namnet placerats
+
+  // Säkerställ att ljudkontexten väcks inom användargesten (klicket)
+  getDrawAudioCtx();
+  loadVoices();
 
   const overlay = document.createElement('div');
   overlay.className = 'draw-overlay';
@@ -424,7 +547,10 @@ function runDrawCeremony(groups, onComplete) {
           </div>
         `).join('')}
       </div>
-      <button class="btn btn-ghost draw-skip" id="drawSkip">⏭ Skippa lottningen</button>
+      <div class="draw-controls">
+        <button class="btn btn-ghost draw-sound" id="drawSound">🔊 Ljud på</button>
+        <button class="btn btn-ghost draw-skip" id="drawSkip">⏭ Skippa lottningen</button>
+      </div>
     </div>`;
   document.body.appendChild(overlay);
 
@@ -432,20 +558,29 @@ function runDrawCeremony(groups, onComplete) {
   const reveal = overlay.querySelector('#drawReveal');
   const pot = overlay.querySelector('#drawPot');
   const skipBtn = overlay.querySelector('#drawSkip');
+  const soundBtn = overlay.querySelector('#drawSound');
 
   let skipped = false;
   let phase = 'drawing';
   let finished = false;
 
+  soundBtn.textContent = drawSoundOn ? '🔊 Ljud på' : '🔇 Ljud av';
+  soundBtn.onclick = () => {
+    drawSoundOn = !drawSoundOn;
+    soundBtn.textContent = drawSoundOn ? '🔊 Ljud på' : '🔇 Ljud av';
+    if (!drawSoundOn) stopSpeak();
+  };
+
   const finish = () => {
     if (finished) return;
     finished = true;
+    stopSpeak();
     overlay.classList.add('closing');
     setTimeout(() => { overlay.remove(); onComplete(); }, 350);
   };
 
   skipBtn.onclick = () => {
-    if (phase === 'drawing') skipped = true;
+    if (phase === 'drawing') { skipped = true; stopSpeak(); }
     else finish();
   };
 
@@ -469,24 +604,29 @@ function runDrawCeremony(groups, onComplete) {
       const p = getPlayer(playerId);
       if (!p) continue;
 
-      statusEl.textContent = `Boll ${i + 1} av ${sequence.length} ur skålen...`;
-      pot.classList.add('shake');
-      await wait(450);
-      pot.classList.remove('shake');
+      statusEl.textContent = `Boll ${i + 1} av ${sequence.length} — trumvirvel...`;
+      pot.classList.add('shaking');
+      playDrumroll(T_DRUMROLL);
+      await wait(T_DRUMROLL);
+      pot.classList.remove('shaking');
       if (skipped) break;
 
+      // Avslöja + krasch + läs upp namnet
+      playCrash();
       reveal.innerHTML = `
         <div class="draw-ball">
           <div class="draw-ball-emoji">${escapeHtml(p.emoji)}</div>
           <div class="draw-ball-name">${escapeHtml(p.name)}</div>
           <div class="draw-ball-group">→ Plan ${groupId}</div>
         </div>`;
-      await wait(650);
+      statusEl.textContent = `${p.name} → Plan ${groupId}`;
+      speakDraw(`${p.name}. Plan ${groupId}`);
+      await wait(T_REVEAL);
       if (skipped) break;
 
       addChip(playerId, groupId, true);
       reveal.innerHTML = '';
-      await wait(300);
+      await wait(T_CHIP);
     }
 
     // Slutfas: fyll resten direkt vid skip
@@ -501,10 +641,12 @@ function runDrawCeremony(groups, onComplete) {
     phase = 'done';
     reveal.innerHTML = `<div class="draw-done">🏆 Grupperna är lottade!</div>`;
     statusEl.textContent = 'Lottningen klar. Lycka till.';
+    pot.classList.remove('shaking');
     pot.classList.add('done');
     skipBtn.textContent = '➡ Visa grupperna';
+    if (!skipped) { playCrash(); speakDraw('Grupperna är lottade. Lycka till!'); }
     launchConfetti(overlay);
-    await wait(skipped ? 600 : 2600);
+    await wait(skipped ? 700 : 3000);
     finish();
   })();
 }
@@ -1608,6 +1750,11 @@ function init() {
   initAudio();
   initReset();
   initSync();
+  // Ladda talsyntes-röster (laddas asynkront i vissa webbläsare)
+  loadVoices();
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }
   renderAll();
 }
 

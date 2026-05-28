@@ -1366,6 +1366,7 @@ input[type="number"] { font-family: 'JetBrains Mono', monospace; }
   position: absolute;
 }
 .draw-pot.shake { animation: potShake 0.45s ease; }
+.draw-pot.shaking { animation: potShake 0.4s linear infinite; }
 .draw-pot.done { opacity: 0.35; transform: scale(0.8); transition: all 0.4s ease; }
 @keyframes potShake {
   0%, 100% { transform: translate(0,0) rotate(0); }
@@ -1457,7 +1458,11 @@ input[type="number"] { font-family: 'JetBrains Mono', monospace; }
   0% { transform: scale(0.4) translateY(-10px); opacity: 0; }
   100% { transform: scale(1) translateY(0); opacity: 1; }
 }
-.draw-skip {
+.draw-controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
   margin-top: 4px;
 }
 
