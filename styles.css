@@ -999,6 +999,9 @@ input[type="number"] { font-family: 'JetBrains Mono', monospace; }
   padding: 32px;
   width: 100%;
   max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   position: relative;
   box-shadow: 0 30px 80px rgba(0,0,0,0.5);
 }
@@ -1052,7 +1055,13 @@ input[type="number"] { font-family: 'JetBrains Mono', monospace; }
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 12px;
+  margin: 12px -32px -32px;
+  padding: 16px 32px;
+  position: sticky;
+  bottom: -32px;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 16px 16px;
 }
 
 /* ---------- Walk-on songs ---------- */
