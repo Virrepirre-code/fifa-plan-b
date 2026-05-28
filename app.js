@@ -360,6 +360,11 @@ function generateGroupsAndSchedule() {
     groups[g].playerIds.push(p.id);
   });
 
+  // Kör lottningsceremoni; commit + navigering sker när den är klar
+  runDrawCeremony(groups, () => commitGroups(groups));
+}
+
+function commitGroups(groups) {
   state.groups = groups;
   state.matches = [];
   state.knockoutGenerated = false;
@@ -382,9 +387,144 @@ function generateGroupsAndSchedule() {
 
   saveState();
   renderAll();
-  toast(`🎲 ${groups.length} grupper genererade · ${state.matches.length} matcher i tidplanen.`);
+  toast(`🎲 ${groups.length} grupper lottade · ${state.matches.length} matcher i tidplanen.`);
   // Navigera till grupper
   $('.tab[data-tab="grupper"]').click();
+}
+
+// ---------- Lottningsceremoni ----------
+function runDrawCeremony(groups, onComplete) {
+  // Bygg dragningsordning: rotera mellan grupperna (A0, B0, C0, A1, B1...)
+  const maxLen = Math.max(...groups.map(g => g.playerIds.length));
+  const sequence = [];
+  for (let pos = 0; pos < maxLen; pos++) {
+    for (const g of groups) {
+      if (g.playerIds[pos]) sequence.push({ playerId: g.playerIds[pos], groupId: g.id });
+    }
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'draw-overlay';
+  overlay.innerHTML = `
+    <div class="draw-inner">
+      <div class="draw-header">
+        <span class="kicker">⚽ Plan B FIFA Cup</span>
+        <h2 class="draw-title">Lottningsceremoni</h2>
+        <p class="draw-status" id="drawStatus">Skålen skakas...</p>
+      </div>
+      <div class="draw-stage">
+        <div class="draw-pot" id="drawPot"><span>⚽</span></div>
+        <div class="draw-reveal" id="drawReveal"></div>
+      </div>
+      <div class="draw-groups" id="drawGroups">
+        ${groups.map(g => `
+          <div class="draw-group-col">
+            <div class="draw-group-head">Plan ${g.id}</div>
+            <div class="draw-group-list" data-group-list="${g.id}"></div>
+          </div>
+        `).join('')}
+      </div>
+      <button class="btn btn-ghost draw-skip" id="drawSkip">⏭ Skippa lottningen</button>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const statusEl = overlay.querySelector('#drawStatus');
+  const reveal = overlay.querySelector('#drawReveal');
+  const pot = overlay.querySelector('#drawPot');
+  const skipBtn = overlay.querySelector('#drawSkip');
+
+  let skipped = false;
+  let phase = 'drawing';
+  let finished = false;
+
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    overlay.classList.add('closing');
+    setTimeout(() => { overlay.remove(); onComplete(); }, 350);
+  };
+
+  skipBtn.onclick = () => {
+    if (phase === 'drawing') skipped = true;
+    else finish();
+  };
+
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+
+  const addChip = (playerId, groupId, animate) => {
+    const p = getPlayer(playerId);
+    if (!p) return;
+    const listEl = overlay.querySelector(`[data-group-list="${groupId}"]`);
+    if (!listEl) return;
+    const chip = document.createElement('div');
+    chip.className = 'draw-chip' + (animate ? ' pop' : '');
+    chip.innerHTML = `<span class="draw-chip-emoji">${escapeHtml(p.emoji)}</span> ${escapeHtml(p.name)}`;
+    listEl.appendChild(chip);
+  };
+
+  (async () => {
+    for (let i = 0; i < sequence.length; i++) {
+      if (skipped) break;
+      const { playerId, groupId } = sequence[i];
+      const p = getPlayer(playerId);
+      if (!p) continue;
+
+      statusEl.textContent = `Boll ${i + 1} av ${sequence.length} ur skålen...`;
+      pot.classList.add('shake');
+      await wait(450);
+      pot.classList.remove('shake');
+      if (skipped) break;
+
+      reveal.innerHTML = `
+        <div class="draw-ball">
+          <div class="draw-ball-emoji">${escapeHtml(p.emoji)}</div>
+          <div class="draw-ball-name">${escapeHtml(p.name)}</div>
+          <div class="draw-ball-group">→ Plan ${groupId}</div>
+        </div>`;
+      await wait(650);
+      if (skipped) break;
+
+      addChip(playerId, groupId, true);
+      reveal.innerHTML = '';
+      await wait(300);
+    }
+
+    // Slutfas: fyll resten direkt vid skip
+    if (skipped) {
+      groups.forEach(g => {
+        const listEl = overlay.querySelector(`[data-group-list="${g.id}"]`);
+        if (listEl) listEl.innerHTML = '';
+      });
+      sequence.forEach(s => addChip(s.playerId, s.groupId, false));
+    }
+
+    phase = 'done';
+    reveal.innerHTML = `<div class="draw-done">🏆 Grupperna är lottade!</div>`;
+    statusEl.textContent = 'Lottningen klar. Lycka till.';
+    pot.classList.add('done');
+    skipBtn.textContent = '➡ Visa grupperna';
+    launchConfetti(overlay);
+    await wait(skipped ? 600 : 2600);
+    finish();
+  })();
+}
+
+function launchConfetti(container) {
+  const colors = ['#FFD60A', '#FF6B35', '#FF3E80', '#06D6A0', '#4CC9F0'];
+  const layer = document.createElement('div');
+  layer.className = 'confetti-layer';
+  for (let i = 0; i < 60; i++) {
+    const bit = document.createElement('div');
+    bit.className = 'confetti-bit';
+    bit.style.left = Math.random() * 100 + '%';
+    bit.style.background = colors[Math.floor(Math.random() * colors.length)];
+    bit.style.animationDelay = (Math.random() * 0.6) + 's';
+    bit.style.animationDuration = (1.6 + Math.random() * 1.4) + 's';
+    bit.style.transform = `rotate(${Math.random() * 360}deg)`;
+    layer.appendChild(bit);
+  }
+  container.appendChild(layer);
+  setTimeout(() => layer.remove(), 3500);
 }
 
 /**

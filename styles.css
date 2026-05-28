@@ -1308,6 +1308,179 @@ input[type="number"] { font-family: 'JetBrains Mono', monospace; }
 }
 .site-footer .small { font-size: 12px; margin-top: 8px; }
 
+/* ---------- Lottningsceremoni ---------- */
+.draw-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: radial-gradient(circle at 50% 30%, #1b2740 0%, #0b0f16 70%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+  animation: fade 0.3s ease;
+}
+.draw-overlay.closing { animation: fadeOut 0.35s ease forwards; }
+@keyframes fadeOut { to { opacity: 0; } }
+.draw-inner {
+  width: 100%;
+  max-width: 900px;
+  text-align: center;
+}
+.draw-header { margin-bottom: 12px; }
+.draw-title {
+  font-family: 'Anton', sans-serif;
+  font-size: clamp(32px, 6vw, 56px);
+  margin: 4px 0 6px;
+  letter-spacing: 1px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.draw-status {
+  color: var(--muted);
+  font-size: 15px;
+  margin: 0;
+  min-height: 22px;
+}
+.draw-stage {
+  position: relative;
+  height: 190px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 8px 0 4px;
+}
+.draw-pot {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #2a374d, #161d28);
+  border: 3px solid var(--primary);
+  display: grid;
+  place-items: center;
+  font-size: 44px;
+  box-shadow: 0 0 40px rgba(255, 214, 10, 0.25), inset 0 -8px 20px rgba(0,0,0,0.5);
+  position: absolute;
+}
+.draw-pot.shake { animation: potShake 0.45s ease; }
+.draw-pot.done { opacity: 0.35; transform: scale(0.8); transition: all 0.4s ease; }
+@keyframes potShake {
+  0%, 100% { transform: translate(0,0) rotate(0); }
+  20% { transform: translate(-6px, -3px) rotate(-8deg); }
+  40% { transform: translate(6px, 2px) rotate(8deg); }
+  60% { transform: translate(-4px, 3px) rotate(-5deg); }
+  80% { transform: translate(4px, -2px) rotate(5deg); }
+}
+.draw-reveal {
+  position: absolute;
+  display: grid;
+  place-items: center;
+}
+.draw-ball {
+  background: linear-gradient(135deg, var(--card), var(--bg-2));
+  border: 2px solid var(--primary);
+  border-radius: 18px;
+  padding: 18px 32px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(255,214,10,0.3);
+  animation: ballPop 0.45s cubic-bezier(0.18, 1.4, 0.4, 1);
+}
+@keyframes ballPop {
+  0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.draw-ball-emoji { font-size: 46px; line-height: 1; }
+.draw-ball-name {
+  font-family: 'Anton', sans-serif;
+  font-size: 28px;
+  margin-top: 6px;
+  letter-spacing: 0.5px;
+}
+.draw-ball-group {
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-top: 4px;
+}
+.draw-done {
+  font-family: 'Anton', sans-serif;
+  font-size: clamp(28px, 5vw, 42px);
+  color: var(--success);
+  animation: ballPop 0.5s cubic-bezier(0.18, 1.4, 0.4, 1);
+}
+.draw-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 16px 0 20px;
+}
+.draw-group-col {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  min-height: 80px;
+}
+.draw-group-head {
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  color: var(--primary-ink);
+  font-family: 'Anton', sans-serif;
+  font-size: 18px;
+  letter-spacing: 1px;
+  padding: 8px;
+}
+.draw-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+}
+.draw-chip {
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.draw-chip-emoji { font-size: 16px; }
+.draw-chip.pop { animation: chipPop 0.4s cubic-bezier(0.18, 1.4, 0.4, 1); }
+@keyframes chipPop {
+  0% { transform: scale(0.4) translateY(-10px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.draw-skip {
+  margin-top: 4px;
+}
+
+/* Confetti */
+.confetti-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.confetti-bit {
+  position: absolute;
+  top: -16px;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  0% { transform: translateY(-20px) rotate(0); opacity: 1; }
+  100% { transform: translateY(105vh) rotate(720deg); opacity: 0.9; }
+}
+
 /* ---------- Utility ---------- */
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
